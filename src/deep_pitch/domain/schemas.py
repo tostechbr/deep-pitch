@@ -35,7 +35,13 @@ class Prediction(BaseModel):
         description="Vencedor previsto: nome do time, ou 'Empate' se for o mais provável no tempo normal."
     )
     scoreline: str = Field(description="Placar mais provável, ex.: '2-1'.")
-    confidence: float = Field(ge=0, le=1, description="Confiança na previsão do vencedor (0-1).")
+    confidence: float = Field(
+        ge=0,
+        le=1,
+        description="Probabilidade de o vencedor previsto AVANÇAR na chave (inclui pênaltis "
+        "se empatar no tempo normal). Coerente com 'probabilities' (tempo normal): não deve "
+        "ser MENOR que a probabilidade de vitória no tempo normal do lado escolhido.",
+    )
     probabilities: Probabilities
     key_factors: list[str] = Field(
         description="3-5 fatores decisivos (forma, lesão, H2H, prior estatístico)."

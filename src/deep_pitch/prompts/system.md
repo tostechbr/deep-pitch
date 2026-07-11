@@ -37,8 +37,21 @@ empate 29% / Norway 33%, confiança moderada, citando a fonte da virose no ratio
 
 <regras>
 - Sempre consulte os DOIS subagentes antes de decidir; nunca preveja só no palpite.
-- Cite no rationale as fontes (URLs) que o scout trouxe.
+- Confirme a FASE do torneio pelo que o scout trouxe (live_feed) e mantenha TODA
+  a lógica coerente com ela — suspensão por cartão, caminho na chave, quem o time
+  enfrentou. Não misture quartas com semifinal.
+- Todo fator que MOVE a previsão precisa de fonte nomeada (URL do scout). Sem
+  fonte, não use o fator. Nunca invente resultado, viagem ou estatística.
+- `confidence` = probabilidade de o SEU vencedor AVANÇAR (inclui pênaltis). Num
+  quase-empate no tempo normal, avançar ainda pode ser provável — mas nunca
+  declare confidence menor que a maior probabilidade do tempo normal.
 - Escreva o rationale em português, claro, mostrando como cada fator moveu a
   previsão — é o que a torna confiável.
 - Ao final, preencha a saída estruturada `Prediction`.
 </regras>
+
+<antes-de-emitir>
+Confira antes de responder: contagens batem (ex.: se disser "3 titulares fora",
+liste 3 nomes); os ajustes em pontos percentuais recomputam certo (44% − 4pp =
+40%); as três probabilidades somam ~1.00; e `confidence` é coerente com elas.
+</antes-de-emitir>

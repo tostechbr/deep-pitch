@@ -43,5 +43,40 @@ def baseline(
     )
 
 
+@app.command()
+def predict(
+    home: str = typer.Argument(..., help="Mandante (país em inglês, ex.: 'Norway')."),
+    away: str = typer.Argument(..., help="Visitante (país em inglês, ex.: 'England')."),
+    neutral: bool = typer.Option(True, help="Sede neutra (padrão em mata-mata)."),
+    context: str = typer.Option(None, help="Contexto, ex.: 'semifinal'."),
+) -> None:
+    """Previsão COMPLETA via Deep Agent (baseline + ao vivo + busca + síntese)."""
+    from .domain import MatchRequest
+    from .service import run_prediction
+
+    typer.secho("Analisando… (baseline + dados ao vivo + notícias)", fg=typer.colors.CYAN, err=True)
+    p = run_prediction(MatchRequest(home=home, away=away, neutral=neutral, context=context))
+    typer.echo(
+        f"\n{p.home} {p.probabilities.home_win:.0%}  |  empate {p.probabilities.draw:.0%}  "
+        f"|  {p.away} {p.probabilities.away_win:.0%}"
+    )
+    typer.secho(
+        f"Vencedor: {p.winner} ({p.scoreline}) · confiança {p.confidence:.0%}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo(f"\n{p.rationale}")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Host."),
+    port: int = typer.Option(8000, help="Porta."),
+) -> None:
+    """Sobe a API FastAPI (POST /predict, GET /health)."""
+    import uvicorn
+
+    uvicorn.run("deep_pitch.api.main:app", host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

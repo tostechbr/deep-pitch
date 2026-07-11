@@ -59,3 +59,11 @@ class Prediction(BaseModel):
     sources: list[str] = Field(
         default_factory=list, description="URLs das fontes usadas no scouting."
     )
+
+
+class PredictionResponse(BaseModel):
+    """Envelope da API: a previsão + metadados de execução."""
+
+    prediction: Prediction
+    model_used: str = Field(description="provider:modelo usado (ex.: 'anthropic:claude-...').")
+    latency_seconds: float | None = None

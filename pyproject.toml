@@ -39,6 +39,7 @@ deep-pitch = "deep_pitch.cli:app"
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
     "ruff>=0.6",
     "langgraph-cli[inmem]>=0.2",    # langgraph dev + Studio local
 ]

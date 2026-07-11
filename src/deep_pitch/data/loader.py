@@ -10,6 +10,7 @@ cache (mesmo velho), usa o cache — melhor dado velho que agente morto.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -47,11 +48,22 @@ def _is_fresh(path: Path, ttl_hours: int) -> bool:
 
 
 def _download(settings: Settings, dest: Path) -> None:
-    """Baixa o CSV para `dest`. Levanta em erro de rede/HTTP."""
+    """Baixa o CSV e grava ATOMICAMENTE (temp + os.replace).
+
+    Atômico de propósito: nunca trunca o cache bom antes de ter o novo em mãos.
+    Se o download vier vazio ou sem o header esperado, NÃO substitui — melhor
+    manter o cache atual que gravar lixo (ex.: HTTP 200 com página de erro).
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     resp = httpx.get(settings.results_url, timeout=settings.request_timeout, follow_redirects=True)
     resp.raise_for_status()
-    dest.write_text(resp.text, encoding="utf-8")
+    text = resp.text
+    first_line = text.splitlines()[0] if text.strip() else ""
+    if "home_team" not in first_line:
+        raise RuntimeError("Download do martj42 veio vazio/inesperado — mantendo cache atual.")
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, dest)  # rename atômico na mesma pasta: cache bom intacto até aqui
 
 
 def load_results(settings: Settings | None = None, *, force_refresh: bool = False) -> pd.DataFrame:
@@ -66,12 +78,12 @@ def load_results(settings: Settings | None = None, *, force_refresh: bool = Fals
     if force_refresh or not _is_fresh(path, settings.cache_ttl_hours):
         try:
             _download(settings, path)
-        except (httpx.HTTPError, OSError) as exc:
+        except (httpx.HTTPError, OSError, RuntimeError) as exc:
             if not path.exists():
                 raise RuntimeError(
                     f"Falha ao baixar {settings.results_url} e não há cache local: {exc}"
                 ) from exc
-            # cache velho existe → segue com ele.
+            # download falhou/veio ruim, mas há cache válido → segue com ele.
 
     df = pd.read_csv(path)
 

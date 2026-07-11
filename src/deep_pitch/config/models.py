@@ -66,12 +66,43 @@ def _resolve(role: Role, settings: Settings) -> tuple[Provider, str]:
         provider = settings.subagent_provider or settings.model_provider
         name = settings.subagent_model_name
 
+    if provider == "free":
+        return "free", ""  # cadeia resolvida em _build_free
+
     if name is None:
         # herda MODEL_NAME só se o provider do papel == provider base; senão default.
         name = settings.model_name if provider == settings.model_provider else None
     if name is None:
         name = DEFAULT_MODELS[provider]
     return provider, name
+
+
+def _has_key(provider: str, settings: Settings) -> bool:
+    """True se o provider tem sua chave setada."""
+    field, _ = _PROVIDER_KEY.get(provider, (None, None))
+    return bool(field and getattr(settings, field))
+
+
+def _build_free(settings: Settings) -> BaseChatModel:
+    """Cadeia de fallback grátis: tenta providers na ordem free_chain, caindo
+    pro próximo em erro (rate limit, provider down). Só entram os que têm key.
+
+    Não precisa de wrapper custom: langchain-core 1.x mapeia bind_tools sobre
+    o primário E os fallbacks, então o agente consegue tool-calling na cadeia.
+    """
+    providers = [p for p in settings.free_chain_list if _has_key(p, settings)]
+    if not providers:
+        need = ", ".join(f"{p.upper()}_API_KEY" for p in settings.free_chain_list)
+        raise ValueError(
+            f"MODEL_PROVIDER=free mas nenhum provider grátis tem key. "
+            f"Preencha ao menos uma de: {need}."
+        )
+    models = [_build(p, DEFAULT_MODELS[p], settings) for p in providers]
+    if len(models) == 1:
+        return models[0]
+    from .fallback import FallbackChatModel
+
+    return FallbackChatModel(models=models)
 
 
 def _build(provider: Provider, name: str, settings: Settings) -> BaseChatModel:
@@ -99,6 +130,8 @@ def get_model(role: Role = "main", settings: Settings | None = None) -> BaseChat
     """Constrói o chat model para o papel ('main' ou 'subagent')."""
     settings = settings or get_settings()
     provider, name = _resolve(role, settings)
+    if provider == "free":
+        return _build_free(settings)
     return _build(provider, name, settings)
 
 
@@ -106,4 +139,7 @@ def describe_model(role: Role = "main", settings: Settings | None = None) -> str
     """String legível 'provider:modelo' — usada no PredictionResponse e logs."""
     settings = settings or get_settings()
     provider, name = _resolve(role, settings)
+    if provider == "free":
+        active = [p for p in settings.free_chain_list if _has_key(p, settings)]
+        return "free:[" + (">".join(active) if active else "sem key") + "]"
     return f"{provider}:{name}"

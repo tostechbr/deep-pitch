@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Provider = Literal["anthropic", "google", "groq", "openrouter", "nvidia"]
+Provider = Literal["anthropic", "google", "groq", "openrouter", "nvidia", "free"]
 
 # CSV canônico de resultados de seleções (martj42, CC0) — inclui a Copa 2026.
 MARTJ42_RESULTS_URL = (
@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     football_data_competition: str = "WC"  # código da Copa em football-data.org v4
     tavily_api_key: str | None = None
 
+    # Ordem da cadeia de fallback quando provider="free" (CSV). Só providers
+    # com key setada entram na cadeia; um estoura rate limit → cai pro próximo.
+    free_chain: str = "groq,google,nvidia,openrouter"
+
     # --- Observabilidade (LangSmith) ---
     langsmith_api_key: str | None = None
     langsmith_tracing: bool = False
@@ -67,6 +71,11 @@ class Settings(BaseSettings):
 
     # --- Rede ---
     request_timeout: float = 30.0
+
+    @property
+    def free_chain_list(self) -> list[str]:
+        """Providers da cadeia free, na ordem (CSV parseado)."""
+        return [p.strip() for p in self.free_chain.split(",") if p.strip()]
 
 
 @lru_cache

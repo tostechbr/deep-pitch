@@ -80,5 +80,13 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Retorna a configuração (cacheada). Chame em vez de instanciar Settings()."""
+    """Retorna a configuração (cacheada). Chame em vez de instanciar Settings().
+
+    Carrega .env com override=True: o .env do projeto MANDA sobre variáveis de
+    shell. Sem isso, uma ANTHROPIC_API_KEY velha exportada no shell mascararia a
+    do .env (env de shell vence .env por padrão no pydantic-settings).
+    """
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
     return Settings()

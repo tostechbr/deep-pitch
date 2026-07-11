@@ -59,3 +59,9 @@ target-version = "py312"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Exclui os testes `live` (chamada real de LLM) do run default — rápido e keyless.
+# Rode-os com: uv run pytest -m live
+addopts = "-m 'not live'"
+markers = [
+    "live: faz chamada real de LLM (gated por ANTHROPIC_API_KEY). Rode com: uv run pytest -m live",
+]

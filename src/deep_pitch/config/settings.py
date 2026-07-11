@@ -65,7 +65,7 @@ class Settings(BaseSettings):
 
     # --- Dados / baseline ---
     results_url: str = MARTJ42_RESULTS_URL
-    cache_dir: Path = Field(default_factory=lambda: Path.home() / ".cache" / "wc2026-analyst")
+    cache_dir: Path = Field(default_factory=lambda: Path.home() / ".cache" / "deep-pitch")
     cache_ttl_hours: int = 12
     history_years: int = 8  # janela de treino do Dixon-Coles (recência)
 

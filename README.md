@@ -1,60 +1,139 @@
 # ⚽ deep-pitch
 
-**Deep Agent que prevê os mata-matas da Copa 2026** e explica o *porquê* de cada previsão.
+**Deep Agent que prevê os mata-matas da Copa do Mundo 2026 — e explica o *porquê*.**
 
-A ideia: raciocinar como analista, não como "mais um modelo de xG". Partir de um
-prior estatístico (Dixon-Coles), ajustar com o estado do torneio (lesões, forma,
-escalação) e comparar com benchmarks (Opta Supercomputer, Hicruben).
+Não é "mais um modelo de xG". É um agente que raciocina como analista: parte de
+um prior estatístico defensável, ajusta com o estado atual do torneio (lesões,
+forma, escalação) e diz exatamente qual fator moveu a previsão.
 
-**Stack:** Deep Agents (LangChain) · model-agnostic (Claude, Gemini, Groq, OpenRouter, NVIDIA) · observável via LangSmith.
+> Construído com **Deep Agents** (LangChain) · **model-agnostic** (Claude, Gemini,
+> Groq, OpenRouter, NVIDIA) · observável via **LangSmith / LangGraph Studio**.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## Funciona hoje
+## A tese
 
-O baseline estatístico já roda — ajustado em **~49k resultados reais de seleções**
-(martj42, desde 1872, atualizado diariamente), com decaimento temporal. Exemplo
-real (semifinal, dado de 11/07/2026):
+Um modelo estatístico puro (Dixon-Coles, Elo) não enxerga uma virose no elenco na
+véspera do jogo. Um LLM puro chuta com confiança e erra a conta. **deep-pitch junta
+os dois:**
 
 ```
+historian ──▶ prior estatístico   (Dixon-Coles sobre 49k jogos reais)
+scout     ──▶ estado ao vivo       (football-data.org + busca: lesão/forma/notícia)
+                     │
+                     ▼
+          reconcile (código) ──▶ probabilidades + confiança
+                     │
+                     ▼
+        agente principal ──▶ Prediction + rationale explicado
+```
+
+O agente **classifica** (qual fator, quão forte); o **código calcula** (aplica ao
+prior, normaliza, deriva a confiança). LLM raciocina, código computa.
+
+## Funciona hoje
+
+Baseline estatístico, sem LLM:
+
+```console
 $ deep-pitch baseline "Norway" "England"
 Norway 28%  |  empate 27%  |  England 44%
 placar provável 1-1 (xG 1.2–1.5) · 7803 jogos desde 2018
 ```
 
+Previsão completa via Deep Agent (reconcilia estatística + ao vivo + notícia):
+
+```console
+$ deep-pitch predict "Norway" "England" --context semifinal
+Norway 35%  |  empate 20%  |  England 45%
+Vencedor: England (1-2) · confiança 57%
+
+## Ponto de partida (prior Dixon-Coles)
+England favorita (44%)...
+## Ajuste ao vivo
+Surto de virose no elenco inglês (Rice, Guehi em dúvida) [fonte: metro.co.uk]...
+```
+
 ## Rodando
 
 ```bash
-uv sync                       # instala (Python 3.12)
-cp .env.example .env          # configure ao menos 1 provider de LLM (p/ o agente)
-uv run pytest                 # 33 testes, ~98% de cobertura
-uv run deep-pitch baseline "Argentina" "Switzerland"
+uv sync                              # instala (Python 3.12)
+cp .env.example .env                 # configure 1 provider de LLM (p/ o agente)
+uv run pytest                        # 73 testes, ~96% de cobertura
+uv run deep-pitch baseline "Argentina" "Switzerland"   # não precisa de LLM
+uv run deep-pitch predict  "Argentina" "Switzerland"   # agente completo
+uv run deep-pitch serve                                # API em :8000
 ```
 
-O baseline não precisa de chave de LLM. O agente completo (abaixo) precisa de
-um provider — veja `.env.example` (Gemini/Groq/OpenRouter/NVIDIA têm free tier).
+O `baseline` roda sem chave. O `predict`/API precisam de um provider — Gemini,
+Groq, OpenRouter e NVIDIA têm free tier (ver `.env.example`).
+
+### API
+
+```bash
+curl -X POST localhost:8000/predict \
+  -H 'content-type: application/json' \
+  -d '{"home":"Norway","away":"England","neutral":true,"context":"semifinal"}'
+```
+
+### Ver o agente pensar (LangGraph Studio)
+
+```bash
+uv run langgraph dev
+```
+
+Abre o **LangGraph Studio** no browser: o grafo do agente, rodável dali, com o
+passo a passo — planejamento → delegação a `scout`/`historian` → cada tool
+(`baseline_prediction`, `web_search`, `live_feed`, `reconcile`) → `Prediction`.
+Com `LANGSMITH_API_KEY` setada, cada run também vira um trace no LangSmith.
 
 ## Arquitetura
 
 ```
-config/    settings + factory de modelo (5 providers + fallback grátis) + observability
+config/    settings + factory de modelo (5 providers + modo 'free' com fallback) + observability
 data/      loader do dataset martj42 (cache, degradação graciosa)
-tools/     baseline Dixon-Coles (o "modelo pequeno") + H2H  [em breve: busca, feed ao vivo]
+tools/     baseline Dixon-Coles · head_to_head · web_search · live_feed · reconcile (determinístico)
+prompts/   system / scout / historian (.md, fora do código)
+subagents/ scout (ao vivo) · historian (estatística)
+agent/     build_agent (create_deep_agent) + graph (langgraph.json)
+domain/    contratos Pydantic (Prediction, ...)
+service/   run_prediction — transport-agnostic
+api/       FastAPI · cli.py — CLI Typer
 ```
 
-Camada `core` transport-agnostic; API (FastAPI) e CLI consomem o mesmo núcleo.
+Núcleo transport-agnostic: **CLI, API e `langgraph dev` consomem o mesmo `service`.**
+
+## Model-agnostic
+
+Escolha por `.env` (`MODEL_PROVIDER`): `anthropic` (melhor tool-calling) · `google`
+· `groq` · `openrouter` · `nvidia` · **`free`** (cadeia de fallback entre os grátis —
+sobrevive a rate limit). Modelo diferente por papel (main forte, subagents baratos).
+
+## Desenvolvido com eval
+
+Este agente foi refinado por um **eval comportamental** (juízes LLM avaliando o
+raciocínio, não o placar). O eval flagrou que o LLM **errava a aritmética** dos
+ajustes ("+4pp" mas o número ia pro lado oposto) e emitia **falsa precisão**. Fix:
+a tool `reconcile` tirou toda a conta do LLM — ele só classifica (`favors`,
+`impact`, `shootout`), o código aplica e normaliza. Bug eliminado por construção,
+coberto por unit test.
+
+## Fontes de dados (open-source)
+
+- [martj42/international_results](https://github.com/martj42/international_results) — resultados de seleções desde 1872 (CC0), inclui a Copa 2026
+- [penaltyblog](https://github.com/martineastwood/penaltyblog) — Dixon-Coles / Poisson / Elo (MIT)
+- [football-data.org](https://www.football-data.org/) — feed ao vivo (free tier cobre a Copa)
 
 ## Roadmap
 
-- [x] Camada de config model-agnostic (Claude/Gemini/Groq/OpenRouter/NVIDIA + modo `free`)
-- [x] Loader do dataset martj42 + baseline Dixon-Coles
-- [ ] Tools ao vivo: football-data.org (bracket/forma) + busca qualitativa
-- [ ] Deep Agent: subagents `scout` + `historian` reconciliando prior + estado ao vivo
-- [ ] API FastAPI + previsão estruturada
-- [ ] Backtest vs Opta / Hicruben
-
-> 🚧 Em construção, por etapas. A parte "Deep Agent" acima ainda está sendo montada;
-> o que roda hoje é o baseline estatístico.
+- [x] Config model-agnostic (5 providers + `free`)
+- [x] Baseline Dixon-Coles + tools ao vivo
+- [x] Deep Agent (scout + historian + reconcile) + eval comportamental
+- [x] API FastAPI + CLI + LangGraph Studio
+- [ ] Backtest vs Opta Supercomputer / benchmarks
+- [ ] Elo como segundo prior
 
 ## Licença
 

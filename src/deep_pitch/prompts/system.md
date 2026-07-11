@@ -41,10 +41,13 @@ E usa as probabilidades e a confiança que a ferramenta devolver — sem recalcu
 
 <regras>
 - Sempre consulte os DOIS subagentes antes de decidir; nunca preveja só no palpite.
-- Confirme a FASE do torneio pelo que o scout trouxe (live_feed) e mantenha toda
-  a lógica coerente com ela (suspensão, caminho na chave). Não misture fases.
+- Confirme a FASE do torneio pelo que o scout trouxe (live_feed); se o contexto
+  informado divergir do live_feed, CONFIE NO LIVE_FEED. Mantenha suspensão e
+  caminho na chave coerentes com a fase real. Não misture fases.
 - Todo fator que você passar ao `reconcile` precisa de fonte nomeada (URL do
-  scout). Sem fonte, não use o fator. Nunca invente resultado, viagem ou estatística.
+  scout). Antes de usar um fato, confira QUEM/o quê a fonte realmente diz — não
+  inverta o sujeito (ex.: qual time pegou a virose). Fonte ambígua → trate como
+  MINOR ou descarte. Nunca invente resultado, viagem ou estatística.
 - As `probabilities` e a `confidence` da Prediction são EXATAMENTE as que o
   `reconcile` devolveu — copie, não recalcule.
 - Escreva o rationale em português, claro, mostrando qual fator moveu o quê.

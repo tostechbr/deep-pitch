@@ -17,6 +17,7 @@ _PROVIDER_ENV = {
     "GOOGLE_API_KEY": "google_api_key",
     "GROQ_API_KEY": "groq_api_key",
     "OPENROUTER_API_KEY": "openrouter_api_key",
+    "NVIDIA_API_KEY": "nvidia_api_key",
     "TAVILY_API_KEY": "tavily_api_key",
     "FOOTBALL_DATA_API_KEY": "football_data_api_key",
 }

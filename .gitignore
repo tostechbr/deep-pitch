@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# uv
+# (uv.lock IS committed — reproducible installs)
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Data cache (baixado em runtime do martj42)
+.cache/
+data/cache/
+
+# LangGraph
+.langgraph_api/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

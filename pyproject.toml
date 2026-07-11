@@ -1,0 +1,59 @@
+[project]
+name = "deep-pitch"
+version = "0.1.0"
+description = "Deep Agent que prevê os mata-matas da Copa 2026 reconciliando modelo estatístico, dados ao vivo e contexto qualitativo."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+    # --- Deep Agents / LangChain (1.0 LTS) ---
+    "deepagents",
+    "langchain>=1.0,<2.0",
+    "langchain-core>=1.0,<2.0",
+    "langgraph>=1.0,<2.0",
+    "langsmith>=0.3.0",
+    # --- Model providers (model-agnostic: escolha via .env) ---
+    "langchain-anthropic",
+    "langchain-google-genai",
+    "langchain-groq",
+    "langchain-openai",             # usado p/ OpenRouter (base_url compatível)
+    # --- Tools / dados ---
+    "langchain-tavily",             # busca qualitativa (se TAVILY_API_KEY)
+    "ddgs>=6.0",                    # fallback de busca keyless (DuckDuckGo)
+    "penaltyblog>=1.11",            # baseline Dixon-Coles / Poisson / Elo
+    "pandas>=2.0",
+    "httpx>=0.27",                  # cliente football-data.org
+    # --- Backend / CLI / config ---
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+deep-pitch = "deep_pitch.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "langgraph-cli[inmem]>=0.2",    # langgraph dev + Studio local
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deep_pitch"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

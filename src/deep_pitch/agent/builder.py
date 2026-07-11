@@ -13,6 +13,7 @@ from ..config.settings import Settings, get_settings
 from ..domain import Prediction
 from ..prompts import load_prompt
 from ..subagents import historian_subagent, scout_subagent
+from ..tools import reconcile
 
 
 def build_agent(settings: Settings | None = None):
@@ -22,6 +23,7 @@ def build_agent(settings: Settings | None = None):
 
     return create_deep_agent(
         model=get_model("main", settings),
+        tools=[reconcile],  # o agente principal reconcilia via código (não na mão)
         subagents=[scout_subagent(settings), historian_subagent(settings)],
         system_prompt=load_prompt("system"),
         response_format=Prediction,

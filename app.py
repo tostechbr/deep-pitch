@@ -24,12 +24,15 @@ from deep_pitch.service import run_prediction  # noqa: E402
 _PROVIDERS = ["anthropic", "google", "groq", "openrouter", "nvidia"]
 
 
-def _byok_settings(provider: str, api_key: str):
+def _byok_settings(provider: str, api_key: str, model: str = ""):
     field, _ = _PROVIDER_KEY[provider]
-    return get_settings().model_copy(update={"model_provider": provider, field: api_key})
+    update = {"model_provider": provider, field: api_key}
+    if model.strip():
+        update["model_name"] = model.strip()
+    return get_settings().model_copy(update=update)
 
 
-def _predict(home, away, neutral, context, provider, api_key):
+def _predict(home, away, neutral, context, provider, model, api_key):
     if not (home and away):
         return "⚠️ Informe os dois times (nomes em inglês)."
     if not api_key:
@@ -37,7 +40,7 @@ def _predict(home, away, neutral, context, provider, api_key):
     try:
         p = run_prediction(
             MatchRequest(home=home, away=away, neutral=neutral, context=context or None),
-            _byok_settings(provider, api_key),
+            _byok_settings(provider, api_key, model),
         )
     except Exception as exc:  # provider/key inválido, rede, etc.
         return f"❌ Erro: {exc}"
@@ -67,12 +70,16 @@ with gr.Blocks(title="deep-pitch") as demo:
         context = gr.Textbox(label="Contexto (opcional)", placeholder="ex.: quarterfinal")
         neutral = gr.Checkbox(label="Sede neutra", value=True)
     with gr.Row():
-        provider = gr.Dropdown(_PROVIDERS, label="Provider (seu modelo)", value="anthropic")
-        api_key = gr.Textbox(label="Sua API key (BYOK)", type="password")
+        provider = gr.Dropdown(_PROVIDERS, label="Provider", value="anthropic")
+        model = gr.Textbox(
+            label="Modelo (opcional)",
+            placeholder="vazio = padrão do provider · ex.: claude-opus-4-8, gemini-2.5-flash",
+        )
+    api_key = gr.Textbox(label="Sua API key (BYOK)", type="password")
     gr.Markdown("🔒 Sua chave é usada só nesta requisição — nunca armazenada nem logada.")
     btn = gr.Button("Prever", variant="primary")
     out = gr.Markdown()
-    btn.click(_predict, [home, away, neutral, context, provider, api_key], out)
+    btn.click(_predict, [home, away, neutral, context, provider, model, api_key], out)
 
 demo.queue()
 

@@ -36,12 +36,18 @@ class PredictRequest(MatchRequest):
         default=None,
         description="Sua chave do provider (BYOK). Usada só neste request, nunca armazenada.",
     )
+    model: str | None = Field(
+        default=None, description="Modelo específico (opcional). Vazio → padrão do provider."
+    )
 
 
-def _byok_settings(provider: Provider, api_key: str) -> Settings:
+def _byok_settings(provider: Provider, api_key: str, model: str | None = None) -> Settings:
     """Settings efêmera com a credencial do usuário (não persiste, não vaza)."""
     field, _ = _PROVIDER_KEY[provider]
-    return get_settings().model_copy(update={"model_provider": provider, field: api_key})
+    update = {"model_provider": provider, field: api_key}
+    if model:
+        update["model_name"] = model
+    return get_settings().model_copy(update=update)
 
 
 @router.get("/health")
@@ -55,7 +61,7 @@ def predict(req: PredictRequest) -> PredictionResponse:
     if bool(req.provider) ^ bool(req.api_key):
         raise HTTPException(422, "Informe provider E api_key juntos (BYOK), ou nenhum.")
 
-    settings = _byok_settings(req.provider, req.api_key) if req.provider else None
+    settings = _byok_settings(req.provider, req.api_key, req.model) if req.provider else None
     started = time.perf_counter()
     prediction = run_prediction(req, settings)
     return PredictionResponse(

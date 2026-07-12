@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import Field
 
 from ..config import describe_model, get_settings
@@ -14,6 +16,14 @@ from ..domain import MatchRequest, PredictionResponse
 from ..service import run_prediction
 
 router = APIRouter()
+
+_INDEX_HTML = (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
+
+
+@router.get("/", response_class=HTMLResponse)
+def index() -> str:
+    """Página BYOK: form (times + provider + key) que chama POST /predict."""
+    return _INDEX_HTML
 
 
 class PredictRequest(MatchRequest):

@@ -31,6 +31,13 @@ def test_health():
     assert r.json()["status"] == "ok"
 
 
+def test_index_page_served():
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "deep-pitch" in r.text
+    assert "api_key" in r.text  # o form BYOK
+
+
 def test_predict_endpoint(monkeypatch):
     monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
     r = client.post("/predict", json={"home": "Norway", "away": "England", "neutral": True})

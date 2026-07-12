@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>deep-pitch — previsão Copa 2026</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, sans-serif;
+      background: #0b0e14; color: #e6e6e6; line-height: 1.5;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    .sub { color: #8b95a7; margin: 0 0 24px; font-size: .95rem; }
+    form { display: grid; gap: 14px; background: #141922; padding: 20px; border-radius: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { font-size: .82rem; color: #9aa4b6; display: block; margin-bottom: 4px; }
+    input, select {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a3140;
+      background: #0b0e14; color: #e6e6e6; font-size: .95rem;
+    }
+    .check { display: flex; align-items: center; gap: 8px; }
+    .check input { width: auto; }
+    .note { font-size: .78rem; color: #6b7488; margin-top: 2px; }
+    button {
+      padding: 12px; border: 0; border-radius: 8px; background: #3b82f6; color: #fff;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    #out { margin-top: 24px; }
+    .card { background: #141922; border-radius: 12px; padding: 20px; }
+    .verdict { font-size: 1.25rem; font-weight: 700; }
+    .bar { height: 22px; border-radius: 6px; background: #1e2633; overflow: hidden; margin: 6px 0; position: relative; }
+    .bar > span { display: block; height: 100%; background: #3b82f6; }
+    .bar em { position: absolute; left: 8px; top: 0; line-height: 22px; font-style: normal; font-size: .8rem; }
+    .rationale { white-space: pre-wrap; font-size: .9rem; color: #c7cede; margin-top: 16px;
+      max-height: 340px; overflow: auto; border-top: 1px solid #2a3140; padding-top: 12px; }
+    .err { color: #f87171; }
+    a { color: #60a5fa; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>⚽ deep-pitch</h1>
+    <p class="sub">Deep Agent prevê mata-matas da Copa 2026 juntando modelo estatístico, dados ao vivo e notícia — e explica o porquê.</p>
+
+    <form id="f">
+      <div class="row">
+        <div><label>Mandante (inglês)</label><input id="home" value="Argentina" required /></div>
+        <div><label>Visitante (inglês)</label><input id="away" value="Switzerland" required /></div>
+      </div>
+      <div><label>Contexto (opcional)</label><input id="context" placeholder="ex.: quarterfinal" /></div>
+      <div class="check"><input type="checkbox" id="neutral" checked /><label style="margin:0">Sede neutra</label></div>
+      <div class="row">
+        <div>
+          <label>Provider (seu modelo)</label>
+          <select id="provider">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="google">Google (Gemini)</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="nvidia">NVIDIA</option>
+          </select>
+        </div>
+        <div>
+          <label>Sua API key</label>
+          <input id="api_key" type="password" placeholder="sk-... / lsv2..." required />
+        </div>
+      </div>
+      <p class="note">🔒 Sua chave é usada só nesta requisição — nunca é armazenada nem logada.</p>
+      <button id="btn" type="submit">Prever</button>
+    </form>
+
+    <div id="out"></div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const pct = (x) => Math.round(x * 100) + "%";
+
+    $("f").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("btn").disabled = true;
+      $("out").innerHTML = '<div class="card">Analisando… (baseline + dados ao vivo + notícias)</div>';
+      try {
+        const r = await fetch("/predict", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            home: $("home").value, away: $("away").value,
+            neutral: $("neutral").checked, context: $("context").value || null,
+            provider: $("provider").value, api_key: $("api_key").value,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : ("HTTP " + r.status));
+        render(data);
+      } catch (err) {
+        $("out").innerHTML = '<div class="card err">Erro: ' + err.message + "</div>";
+      } finally {
+        $("btn").disabled = false;
+      }
+    });
+
+    function bar(name, v) {
+      return '<div class="bar"><span style="width:' + pct(v) + '"></span><em>' + name + " " + pct(v) + "</em></div>";
+    }
+    function render(d) {
+      const p = d.prediction, pr = p.probabilities;
+      $("out").innerHTML =
+        '<div class="card">' +
+        '<div class="verdict">' + p.winner + " — " + p.scoreline + '</div>' +
+        '<div class="sub">confiança ' + pct(p.confidence) + " · " + d.model_used +
+          (d.latency_seconds ? " · " + d.latency_seconds + "s" : "") + '</div>' +
+        bar(p.home, pr.home_win) + bar("Empate", pr.draw) + bar(p.away, pr.away_win) +
+        '<ul>' + p.key_factors.map((f) => "<li>" + f + "</li>").join("") + '</ul>' +
+        '<div class="rationale">' + p.rationale + '</div>' +
+        '</div>';
+    }
+  </script>
+</body>
+</html>

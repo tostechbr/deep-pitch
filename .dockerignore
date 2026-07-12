@@ -1,0 +1,17 @@
+.venv/
+.git/
+.github/
+tests/
+.pytest_cache/
+.ruff_cache/
+.langgraph_api/
+run-*.json
+.coverage
+.coverage.*
+htmlcov/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.DS_Store

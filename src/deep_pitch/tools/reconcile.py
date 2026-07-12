@@ -37,8 +37,17 @@ def apply_adjustments(
     adjustments: list[Adjustment],
     shootout: Literal["home", "away", "even"] = "even",
 ) -> dict:
-    """Aplica os ajustes (tier→pp) ao prior, normaliza e deriva quem avança."""
-    probs = {"home": home_win, "draw": draw, "away": away_win}
+    """Aplica os ajustes (tier→pp) ao prior, normaliza e deriva quem avança.
+
+    Valida a fronteira LLM→código: o prior é normalizado para somar 1 ANTES de
+    aplicar os ajustes (em pp). Assim funciona quer o LLM mande 0-1 quer mande %
+    (erro clássico) — sem isso, um prior em escala % engoliria o ajuste em silêncio.
+    """
+    prior_total = home_win + draw + away_win
+    if prior_total <= 0:
+        raise ValueError("Prior inválido: home_win + draw + away_win deve ser > 0.")
+    # normaliza o prior p/ soma 1 → ajustes em pp têm magnitude relativa correta
+    probs = {"home": home_win / prior_total, "draw": draw / prior_total, "away": away_win / prior_total}
     for adj in adjustments:
         probs[adj.favors] += _IMPACT_PP[adj.impact] / 100.0
 

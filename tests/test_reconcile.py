@@ -1,5 +1,7 @@
 """Testes da reconciliação determinística (tier→pp, normalização, confiança)."""
 
+import pytest
+
 from deep_pitch.tools.reconcile import Adjustment, apply_adjustments, reconcile
 
 
@@ -39,6 +41,21 @@ def test_probs_never_negative():
         0.05, 0.05, 0.90, [Adjustment(favors="away", impact="major", reason="x")]
     )
     assert all(v >= 0 for v in r["probs"].values())
+
+
+def test_percent_prior_normalized_like_unit():
+    # prior em % (erro clássico do LLM) deve dar o MESMO que em 0-1 — a fronteira normaliza
+    adj = [Adjustment(favors="home", impact="major", reason="x")]
+    unit = apply_adjustments(0.28, 0.27, 0.44, adj)
+    pct = apply_adjustments(28.0, 27.0, 44.0, adj)
+    assert abs(unit["probs"]["home"] - pct["probs"]["home"]) < 1e-9
+    # ajuste 'major' realmente moveu o mandante (~0.28 → ~0.36), não sumiu na escala %
+    assert pct["probs"]["home"] > 0.34
+
+
+def test_zero_prior_raises():
+    with pytest.raises(ValueError):
+        apply_adjustments(0.0, 0.0, 0.0, [])
 
 
 def test_reconcile_tool_output():

@@ -19,12 +19,12 @@ TMP="$(mktemp -d)"
 echo "→ Clonando o Space: ${REMOTE}"
 git clone "${REMOTE}" "${TMP}/space"
 
-echo "→ Copiando o código (Dockerfile, src, pyproject, uv.lock)"
-cp -r Dockerfile pyproject.toml uv.lock src "${TMP}/space/"
+echo "→ Copiando o código (app.py Gradio, requirements.txt, src)"
+cp -r app.py requirements.txt src "${TMP}/space/"
 
 echo "→ Gerando README do Space (frontmatter HF + conteúdo do projeto)"
 {
-  printf -- '---\ntitle: deep-pitch\nemoji: "⚽"\ncolorFrom: blue\ncolorTo: gray\nsdk: docker\napp_port: 7860\npinned: false\n---\n\n'
+  printf -- '---\ntitle: deep-pitch\nemoji: "⚽"\ncolorFrom: blue\ncolorTo: gray\nsdk: gradio\napp_file: app.py\npython_version: "3.12"\npinned: false\n---\n\n'
   cat README.md
 } > "${TMP}/space/README.md"
 

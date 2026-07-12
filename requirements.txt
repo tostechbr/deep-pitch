@@ -1,0 +1,19 @@
+# Deps de runtime para o Hugging Face Gradio Space (HF instala o gradio via SDK).
+# (fastapi/uvicorn/typer não entram — o Space usa só o app.py Gradio)
+deepagents
+langchain>=1.0,<2.0
+langchain-core>=1.0,<2.0
+langgraph>=1.0,<2.0
+langsmith>=0.3.0
+langchain-anthropic
+langchain-google-genai
+langchain-groq
+langchain-openai
+langchain-tavily
+ddgs>=6.0
+penaltyblog>=1.11
+pandas>=2.0
+httpx>=0.27
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0

@@ -13,11 +13,8 @@ from dataclasses import dataclass
 import pandas as pd
 
 from .config.settings import Settings, get_settings
-from .data import load_results, played_matches
+from .data import load_results, played_matches, wc2026_played
 from .tools.baseline import UnknownTeamError, _resolve_team, _window, fit_dixon_coles
-
-_WORLD_CUP = "FIFA World Cup"
-_WC2026_FROM = pd.Timestamp("2026-06-01")
 
 
 def rps(probs: tuple[float, float, float], outcome: int) -> float:
@@ -51,7 +48,7 @@ def run_backtest(settings: Settings | None = None, df: pd.DataFrame | None = Non
     settings = settings or get_settings()
     played = played_matches(load_results(settings)) if df is None else df
 
-    wc = played[(played["tournament"] == _WORLD_CUP) & (played["date"] >= _WC2026_FROM)].copy()
+    wc = wc2026_played(played)  # só jogos da Copa 2026 já decididos
     if wc.empty:
         raise RuntimeError("Sem jogos decididos da Copa 2026 no dataset.")
 

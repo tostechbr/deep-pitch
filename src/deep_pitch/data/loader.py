@@ -111,3 +111,14 @@ def wc2026_fixtures(df: pd.DataFrame) -> pd.DataFrame:
         & (df["home_score"].isna() | df["away_score"].isna())
     )
     return df[mask].copy()
+
+
+def wc2026_played(df: pd.DataFrame) -> pd.DataFrame:
+    """Jogos da Copa 2026 já DISPUTADOS (placar preenchido) — usado no backtest."""
+    mask = (
+        (df["tournament"] == _WORLD_CUP)
+        & (df["date"] >= _WC2026_FROM)
+        & df["home_score"].notna()
+        & df["away_score"].notna()
+    )
+    return df[mask].copy()

@@ -66,3 +66,12 @@ def test_run_backtest_synthetic(make_settings):
     assert 0.0 <= r.hit_rate <= 1.0
     assert 0.0 <= r.mean_rps <= 1.0
     assert r.trained_on > 0
+
+
+def test_backtest_train_excludes_world_cup_no_leakage(make_settings):
+    # a tese central: treino usa SÓ jogos pré-Copa. Uma regressão de leakage
+    # (trocar `date < wc.min()` por `<=`) incluiria os jogos da Copa e quebraria isto.
+    df = _synthetic()
+    r = run_backtest(settings=make_settings(history_years=50), df=df)  # janela cobre tudo
+    pre_copa = df[df["tournament"] != "FIFA World Cup"]
+    assert r.trained_on == len(pre_copa)

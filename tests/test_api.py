@@ -32,7 +32,7 @@ def test_health():
 
 
 def test_predict_endpoint(monkeypatch):
-    monkeypatch.setattr(routes, "run_prediction", lambda req: _pred())
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
     r = client.post("/predict", json={"home": "Norway", "away": "England", "neutral": True})
     assert r.status_code == 200
     body = r.json()
@@ -44,4 +44,23 @@ def test_predict_endpoint(monkeypatch):
 
 def test_predict_validation_error():
     r = client.post("/predict", json={"home": "Norway"})  # falta 'away'
+    assert r.status_code == 422
+
+
+def test_predict_byok(monkeypatch):
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
+    r = client.post(
+        "/predict",
+        json={"home": "Argentina", "away": "Switzerland", "provider": "groq", "api_key": "user-key"},
+    )
+    assert r.status_code == 200
+    assert r.json()["model_used"].startswith("groq:")  # refletiu o provider do usuário
+
+
+def test_predict_byok_requires_both(monkeypatch):
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
+    r = client.post(
+        "/predict",
+        json={"home": "Argentina", "away": "Switzerland", "provider": "groq"},  # sem api_key
+    )
     assert r.status_code == 422

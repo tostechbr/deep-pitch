@@ -30,12 +30,22 @@ def _pred() -> Prediction:
 
 
 def test_run_prediction_returns_structured(monkeypatch):
-    monkeypatch.setattr(svc, "_agent", lambda: _FakeAgent({"structured_response": _pred()}))
+    monkeypatch.setattr(svc, "_default_agent", lambda: _FakeAgent({"structured_response": _pred()}))
     p = svc.run_prediction(MatchRequest(home="A", away="B"))
     assert p.winner == "A"
 
 
 def test_run_prediction_missing_structured_raises(monkeypatch):
-    monkeypatch.setattr(svc, "_agent", lambda: _FakeAgent({"messages": []}))
+    monkeypatch.setattr(svc, "_default_agent", lambda: _FakeAgent({"messages": []}))
     with pytest.raises(RuntimeError):
         svc.run_prediction(MatchRequest(home="A", away="B"))
+
+
+def test_run_prediction_byok_builds_fresh_agent(monkeypatch, make_settings):
+    # com settings (BYOK) → constrói agente fresco (não usa o cache padrão)
+    monkeypatch.setattr(svc, "build_agent", lambda s: _FakeAgent({"structured_response": _pred()}))
+    p = svc.run_prediction(
+        MatchRequest(home="A", away="B"),
+        settings=make_settings(model_provider="groq", groq_api_key="user-key"),
+    )
+    assert p.winner == "A"

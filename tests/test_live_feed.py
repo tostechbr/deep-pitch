@@ -62,3 +62,13 @@ def test_network_error_message(make_settings, monkeypatch):
     monkeypatch.setattr(lf, "_fetch_matches", _boom)
     out = live_feed_for("Norway", make_settings(football_data_api_key="tok"))
     assert "indisponível" in out
+
+
+def test_non_json_200_degrades(make_settings, monkeypatch):
+    # HTTP 200 com corpo não-JSON → resp.json() levanta ValueError; deve degradar, não quebrar
+    def _bad(s):
+        raise ValueError("Expecting value: line 1 column 1")
+
+    monkeypatch.setattr(lf, "_fetch_matches", _bad)
+    out = live_feed_for("Norway", make_settings(football_data_api_key="tok"))
+    assert "indisponível" in out

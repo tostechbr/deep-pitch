@@ -78,6 +78,8 @@ def live_feed_for(team: str, settings: Settings | None = None) -> str:
         return f"Feed ao vivo indisponível (HTTP {code}). Use web_search."
     except httpx.HTTPError as exc:
         return f"Feed ao vivo indisponível (rede: {type(exc).__name__}). Use web_search."
+    except ValueError:  # HTTP 200 com corpo não-JSON (ex.: página de erro) → degrada igual loader
+        return "Feed ao vivo indisponível (resposta inesperada do servidor). Use web_search."
 
     return _feed_for_team(matches, team)
 

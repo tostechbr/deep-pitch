@@ -16,8 +16,8 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 RUN uv sync --frozen --no-dev
 
-ENV PORT=8000
-EXPOSE 8000
+# 7860 = default do Hugging Face Spaces. Render/Railway injetam $PORT e vencem.
+EXPOSE 7860
 
-# host 0.0.0.0 + porta do provedor ($PORT) — shell form p/ expandir a env
-CMD uv run uvicorn deep_pitch.api.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# host 0.0.0.0 + porta do provedor ($PORT, senão 7860) — shell form p/ expandir
+CMD uv run uvicorn deep_pitch.api.main:app --host 0.0.0.0 --port ${PORT:-7860}

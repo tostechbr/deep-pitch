@@ -23,7 +23,7 @@ Role = Literal["main", "subagent"]
 
 # Default por provider (override via MODEL_NAME / *_MODEL_NAME no .env).
 DEFAULT_MODELS: dict[str, str] = {
-    "anthropic": "claude-sonnet-4-5-20250929",  # melhor tool-calling → trace limpo
+    "anthropic": "claude-sonnet-5",             # Sonnet 5 (atual); tool-calling forte
     "google": "gemini-2.5-flash",               # free tier, tool-calling decente
     "groq": "llama-3.3-70b-versatile",          # free tier, rápido
     "openrouter": "meta-llama/llama-3.3-70b-instruct:free",
@@ -51,10 +51,6 @@ _PROVIDER_KEY: dict[str, tuple[str, str]] = {
     "openrouter": ("openrouter_api_key", "OPENROUTER_API_KEY"),
     "nvidia": ("nvidia_api_key", "NVIDIA_API_KEY"),
 }
-
-# Temperatura baixa: previsão quer consistência, não criatividade.
-_TEMPERATURE = 0.2
-
 
 def _resolve(role: Role, settings: Settings) -> tuple[Provider, str]:
     """Resolve (provider, modelo) para o papel, aplicando overrides por papel."""
@@ -116,19 +112,14 @@ def _build(provider: Provider, name: str, settings: Settings) -> BaseChatModel:
     if not key:
         raise ValueError(f"Provider {provider!r} escolhido mas {env_name} está vazio. Preencha no .env.")
 
+    # Sem `temperature`: modelos novos (Claude 5, Opus 4.8) o deprecaram, e a
+    # parte determinística vive no reconcile — não no LLM.
     if provider in _OPENAI_COMPAT_BASE:
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(
-            model=name,
-            api_key=key,
-            base_url=_OPENAI_COMPAT_BASE[provider],
-            temperature=_TEMPERATURE,
-        )
+        return ChatOpenAI(model=name, api_key=key, base_url=_OPENAI_COMPAT_BASE[provider])
 
-    return init_chat_model(
-        f"{_INIT_CHAT_PROVIDER[provider]}:{name}", api_key=key, temperature=_TEMPERATURE
-    )
+    return init_chat_model(f"{_INIT_CHAT_PROVIDER[provider]}:{name}", api_key=key)
 
 
 def get_model(role: Role = "main", settings: Settings | None = None) -> BaseChatModel:

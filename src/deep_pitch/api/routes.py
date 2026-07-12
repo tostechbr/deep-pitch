@@ -65,6 +65,12 @@ def predict(req: PredictRequest) -> PredictionResponse:
     """Previsão completa via Deep Agent (baseline + ao vivo + busca + síntese)."""
     if bool(req.provider) ^ bool(req.api_key):
         raise HTTPException(422, "Informe provider E api_key juntos (BYOK), ou nenhum.")
+    if req.provider and req.provider not in _PROVIDER_KEY:
+        raise HTTPException(
+            422,
+            f"Provider '{req.provider}' não suporta BYOK — escolha um provider concreto "
+            f"(um de: {', '.join(_PROVIDER_KEY)}).",
+        )
 
     settings = _byok_settings(req.provider, req.api_key, req.model) if req.provider else None
     tracer = build_tracer(req.langsmith_key, req.langsmith_project or "deep-pitch")

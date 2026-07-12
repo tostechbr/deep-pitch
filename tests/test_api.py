@@ -71,3 +71,13 @@ def test_predict_byok_requires_both(monkeypatch):
         json={"home": "Argentina", "away": "Switzerland", "provider": "groq"},  # sem api_key
     )
     assert r.status_code == 422
+
+
+def test_predict_byok_rejects_non_byok_provider(monkeypatch):
+    # provider='free' é valor válido do Literal, mas não suporta BYOK → 422, não 500
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None, callbacks=None: _pred())
+    r = client.post(
+        "/predict",
+        json={"home": "A", "away": "B", "provider": "free", "api_key": "k"},
+    )
+    assert r.status_code == 422

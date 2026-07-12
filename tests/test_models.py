@@ -1,5 +1,7 @@
 """Testes da factory de modelo (dispatch, papel, chave ausente)."""
 
+import os
+
 import pytest
 
 from deep_pitch.config.models import _resolve, describe_model, get_model
@@ -49,3 +51,10 @@ def test_model_name_not_leaked_across_providers(make_settings):
 def test_describe_model(make_settings):
     s = make_settings(model_provider="groq", groq_api_key="d")
     assert describe_model("main", s).startswith("groq:")
+
+
+def test_get_model_does_not_leak_key_to_env(make_settings, monkeypatch):
+    # segurança BYOK: a key vai por kwarg no construtor, NUNCA pro os.environ
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    get_model("main", make_settings(model_provider="groq", groq_api_key="secret-key"))
+    assert os.environ.get("GROQ_API_KEY") != "secret-key"

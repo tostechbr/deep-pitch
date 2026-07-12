@@ -12,7 +12,6 @@ Zero lock-in.
 
 from __future__ import annotations
 
-import os
 from typing import Literal
 
 from langchain.chat_models import init_chat_model
@@ -106,12 +105,16 @@ def _build_free(settings: Settings) -> BaseChatModel:
 
 
 def _build(provider: Provider, name: str, settings: Settings) -> BaseChatModel:
-    """Instancia um chat model concreto (sem chamada de rede)."""
+    """Instancia um chat model concreto (sem chamada de rede).
+
+    A key é passada por kwarg (api_key=), NUNCA via os.environ — assim o mesmo
+    processo pode servir requests com keys diferentes (BYOK) sem vazamento entre
+    usuários.
+    """
     field, env_name = _PROVIDER_KEY[provider]
     key = getattr(settings, field)
     if not key:
         raise ValueError(f"Provider {provider!r} escolhido mas {env_name} está vazio. Preencha no .env.")
-    os.environ[env_name] = key  # garante que o SDK do provider acha a chave
 
     if provider in _OPENAI_COMPAT_BASE:
         from langchain_openai import ChatOpenAI
@@ -123,7 +126,9 @@ def _build(provider: Provider, name: str, settings: Settings) -> BaseChatModel:
             temperature=_TEMPERATURE,
         )
 
-    return init_chat_model(f"{_INIT_CHAT_PROVIDER[provider]}:{name}", temperature=_TEMPERATURE)
+    return init_chat_model(
+        f"{_INIT_CHAT_PROVIDER[provider]}:{name}", api_key=key, temperature=_TEMPERATURE
+    )
 
 
 def get_model(role: Role = "main", settings: Settings | None = None) -> BaseChatModel:

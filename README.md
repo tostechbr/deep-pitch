@@ -2,6 +2,8 @@
 
 **Deep Agent que prevê os mata-matas da Copa do Mundo 2026 — e explica o *porquê*.**
 
+> 🔴 **Demo ao vivo (BYOK):** [tostech-deep-pitch.hf.space](https://tostech-deep-pitch.hf.space) — escolha o provider e use sua própria chave.
+
 Não é "mais um modelo de xG". É um agente que raciocina como analista: parte de
 um prior estatístico defensável, ajusta com o estado atual do torneio (lesões,
 forma, escalação) e diz exatamente qual fator moveu a previsão.

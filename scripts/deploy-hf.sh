@@ -24,7 +24,7 @@ cp -r app.py requirements.txt src "${TMP}/space/"
 
 echo "→ Gerando README do Space (frontmatter HF + conteúdo do projeto)"
 {
-  printf -- '---\ntitle: deep-pitch\nemoji: "⚽"\ncolorFrom: blue\ncolorTo: gray\nsdk: gradio\napp_file: app.py\npython_version: "3.12"\npinned: false\n---\n\n'
+  printf -- '---\ntitle: deep-pitch\nemoji: "⚽"\ncolorFrom: blue\ncolorTo: gray\nsdk: gradio\nsdk_version: "6.20.0"\napp_file: app.py\npython_version: "3.12"\npinned: false\n---\n\n'
   cat README.md
 } > "${TMP}/space/README.md"
 

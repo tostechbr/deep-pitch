@@ -31,3 +31,7 @@ data/cache/
 .DS_Store
 .idea/
 .vscode/
+
+# LangGraph dev (in-memory persistence)
+run-*.json
+.langgraph_api/

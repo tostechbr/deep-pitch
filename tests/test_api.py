@@ -39,7 +39,7 @@ def test_index_page_served():
 
 
 def test_predict_endpoint(monkeypatch):
-    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None, callbacks=None: _pred())
     r = client.post("/predict", json={"home": "Norway", "away": "England", "neutral": True})
     assert r.status_code == 200
     body = r.json()
@@ -55,7 +55,7 @@ def test_predict_validation_error():
 
 
 def test_predict_byok(monkeypatch):
-    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None, callbacks=None: _pred())
     r = client.post(
         "/predict",
         json={"home": "Argentina", "away": "Switzerland", "provider": "groq", "api_key": "user-key"},
@@ -65,7 +65,7 @@ def test_predict_byok(monkeypatch):
 
 
 def test_predict_byok_requires_both(monkeypatch):
-    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None: _pred())
+    monkeypatch.setattr(routes, "run_prediction", lambda req, settings=None, callbacks=None: _pred())
     r = client.post(
         "/predict",
         json={"home": "Argentina", "away": "Switzerland", "provider": "groq"},  # sem api_key

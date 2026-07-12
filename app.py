@@ -18,10 +18,20 @@ import gradio as gr  # noqa: E402
 
 from deep_pitch.config import get_settings  # noqa: E402
 from deep_pitch.config.models import _PROVIDER_KEY  # noqa: E402
+from deep_pitch.config.tracing import build_tracer  # noqa: E402
 from deep_pitch.domain import MatchRequest  # noqa: E402
 from deep_pitch.service import run_prediction  # noqa: E402
 
 _PROVIDERS = ["anthropic", "google", "groq", "openrouter", "nvidia"]
+
+# Modelos sugeridos por provider (dropdown). "" = usa o padrão do provider.
+_MODELS = {
+    "anthropic": ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
+    "google": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"],
+    "groq": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+    "openrouter": ["meta-llama/llama-3.3-70b-instruct:free", "deepseek/deepseek-chat"],
+    "nvidia": ["meta/llama-3.3-70b-instruct", "deepseek-ai/deepseek-r1"],
+}
 
 
 def _byok_settings(provider: str, api_key: str, model: str = ""):
@@ -32,15 +42,17 @@ def _byok_settings(provider: str, api_key: str, model: str = ""):
     return get_settings().model_copy(update=update)
 
 
-def _predict(home, away, neutral, context, provider, model, api_key):
+def _predict(home, away, neutral, context, provider, model, api_key, langsmith_key):
     if not (home and away):
         return "⚠️ Informe os dois times (nomes em inglês)."
     if not api_key:
         return "⚠️ Cole sua API key do provider escolhido (BYOK)."
     try:
+        tracer = build_tracer(langsmith_key)  # trace no LangSmith do usuário, se der a key
         p = run_prediction(
             MatchRequest(home=home, away=away, neutral=neutral, context=context or None),
             _byok_settings(provider, api_key, model),
+            callbacks=[tracer] if tracer else None,
         )
     except Exception as exc:  # provider/key inválido, rede, etc.
         return f"❌ Erro: {exc}"
@@ -71,15 +83,31 @@ with gr.Blocks(title="deep-pitch") as demo:
         neutral = gr.Checkbox(label="Sede neutra", value=True)
     with gr.Row():
         provider = gr.Dropdown(_PROVIDERS, label="Provider", value="anthropic")
-        model = gr.Textbox(
-            label="Modelo (opcional)",
-            placeholder="vazio = padrão do provider · ex.: claude-opus-4-8, gemini-2.5-flash",
+        model = gr.Dropdown(
+            [""] + _MODELS["anthropic"],
+            value="",
+            label="Modelo (vazio = padrão do provider)",
+            allow_custom_value=True,  # dá pra digitar um id fora da lista
         )
     api_key = gr.Textbox(label="Sua API key (BYOK)", type="password")
-    gr.Markdown("🔒 Sua chave é usada só nesta requisição — nunca armazenada nem logada.")
+    langsmith_key = gr.Textbox(
+        label="LangSmith key (opcional)",
+        type="password",
+        placeholder="lsv2_... → veja o trace do agente no SEU dashboard LangSmith",
+    )
+    gr.Markdown("🔒 Suas chaves são usadas só nesta requisição — nunca armazenadas nem logadas.")
     btn = gr.Button("Prever", variant="primary")
     out = gr.Markdown()
-    btn.click(_predict, [home, away, neutral, context, provider, model, api_key], out)
+
+    # troca a lista de modelos conforme o provider
+    provider.change(
+        lambda p: gr.update(choices=[""] + _MODELS.get(p, []), value=""), provider, model
+    )
+    btn.click(
+        _predict,
+        [home, away, neutral, context, provider, model, api_key, langsmith_key],
+        out,
+    )
 
 demo.queue()
 

@@ -18,12 +18,17 @@ def _default_agent():
     return build_agent()
 
 
-def run_prediction(request: MatchRequest, settings: Settings | None = None) -> Prediction:
+def run_prediction(
+    request: MatchRequest,
+    settings: Settings | None = None,
+    callbacks: list | None = None,
+) -> Prediction:
     """Roda o Deep Agent para o confronto e retorna a previsão estruturada.
 
     Se `settings` for dado (BYOK: provider + key do usuário), constrói um agente
     FRESCO com ela — sem cache, sem estado partilhado entre usuários. Senão usa
-    o agente padrão do servidor.
+    o agente padrão do servidor. `callbacks` (ex.: tracer LangSmith do usuário)
+    entram só neste invoke — por-request, sem estado global.
     """
     agent = build_agent(settings) if settings is not None else _default_agent()
     content = (
@@ -33,10 +38,10 @@ def run_prediction(request: MatchRequest, settings: Settings | None = None) -> P
     if request.context:
         content += f" Contexto: {request.context}."
 
-    result = agent.invoke(
-        {"messages": [{"role": "user", "content": content}]},
-        config={"configurable": {"thread_id": f"predict-{uuid.uuid4().hex[:8]}"}},
-    )
+    config: dict = {"configurable": {"thread_id": f"predict-{uuid.uuid4().hex[:8]}"}}
+    if callbacks:
+        config["callbacks"] = callbacks
+    result = agent.invoke({"messages": [{"role": "user", "content": content}]}, config=config)
     prediction = result.get("structured_response")
     if prediction is None:
         raise RuntimeError("O agente não retornou uma Prediction estruturada.")

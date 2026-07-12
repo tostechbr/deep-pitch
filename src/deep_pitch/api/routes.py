@@ -12,6 +12,7 @@ from pydantic import Field
 from ..config import describe_model, get_settings
 from ..config.models import _PROVIDER_KEY
 from ..config.settings import Provider, Settings
+from ..config.tracing import build_tracer
 from ..domain import MatchRequest, PredictionResponse
 from ..service import run_prediction
 
@@ -39,6 +40,10 @@ class PredictRequest(MatchRequest):
     model: str | None = Field(
         default=None, description="Modelo específico (opcional). Vazio → padrão do provider."
     )
+    langsmith_key: str | None = Field(
+        default=None, description="Sua LangSmith key (opcional). Trace vai pro seu dashboard."
+    )
+    langsmith_project: str | None = Field(default=None, description="Projeto LangSmith (opcional).")
 
 
 def _byok_settings(provider: Provider, api_key: str, model: str | None = None) -> Settings:
@@ -62,8 +67,10 @@ def predict(req: PredictRequest) -> PredictionResponse:
         raise HTTPException(422, "Informe provider E api_key juntos (BYOK), ou nenhum.")
 
     settings = _byok_settings(req.provider, req.api_key, req.model) if req.provider else None
+    tracer = build_tracer(req.langsmith_key, req.langsmith_project or "deep-pitch")
+    callbacks = [tracer] if tracer else None
     started = time.perf_counter()
-    prediction = run_prediction(req, settings)
+    prediction = run_prediction(req, settings, callbacks=callbacks)
     return PredictionResponse(
         prediction=prediction,
         model_used=describe_model("main", settings),

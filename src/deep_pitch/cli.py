@@ -1,8 +1,8 @@
 """CLI do deep-pitch.
 
-Por ora expõe o baseline estatístico — funciona sem LLM. O comando dirigido
-pelo Deep Agent (que junta baseline + dados ao vivo + busca qualitativa) entra
-na Etapa 5 e vai conviver com este.
+Comandos: `baseline` (previsão estatística Dixon-Coles, sem LLM), `predict`
+(previsão completa via Deep Agent: baseline + ao vivo + busca), `backtest`
+(calibração honesta na Copa 2026) e `serve` (sobe a API FastAPI).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ app = typer.Typer(
 
 @app.callback()
 def _main() -> None:
-    """Mantém subcomandos nomeados (`baseline` agora; `predict` via agente na Etapa 5)."""
+    """Mantém os subcomandos nomeados (baseline · predict · backtest · serve)."""
 
 
 @app.command()
@@ -48,7 +48,7 @@ def predict(
     home: str = typer.Argument(..., help="Mandante (país em inglês, ex.: 'Norway')."),
     away: str = typer.Argument(..., help="Visitante (país em inglês, ex.: 'England')."),
     neutral: bool = typer.Option(True, help="Sede neutra (padrão em mata-mata)."),
-    context: str = typer.Option(None, help="Contexto, ex.: 'semifinal'."),
+    context: str | None = typer.Option(None, help="Contexto, ex.: 'semifinal'."),
 ) -> None:
     """Previsão COMPLETA via Deep Agent (baseline + ao vivo + busca + síntese)."""
     from .domain import MatchRequest

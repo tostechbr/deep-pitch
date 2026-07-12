@@ -4,13 +4,16 @@
 
 > 🔴 **Demo ao vivo (BYOK):** [tostech-deep-pitch.hf.space](https://tostech-deep-pitch.hf.space) — escolha o provider e use sua própria chave.
 
-Não é "mais um modelo de xG". É um agente que raciocina como analista: parte de
+Não é "só mais um modelo estatístico". É um agente que raciocina como analista: parte de
 um prior estatístico defensável, ajusta com o estado atual do torneio (lesões,
 forma, escalação) e diz exatamente qual fator moveu a previsão.
 
 > Construído com **Deep Agents** (LangChain) · **model-agnostic** (Claude, Gemini,
 > Groq, OpenRouter, NVIDIA) · observável via **LangSmith / LangGraph Studio**.
 
+[![CI](https://github.com/tostechbr/deep-pitch/actions/workflows/ci.yml/badge.svg)](https://github.com/tostechbr/deep-pitch/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://tostech-deep-pitch.hf.space)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -48,7 +51,7 @@ placar provável 1-1 (xG 1.2–1.5) · 7803 jogos desde 2018
 Previsão completa via Deep Agent (reconcilia estatística + ao vivo + notícia):
 
 ```console
-$ deep-pitch predict "Norway" "England" --context semifinal
+$ deep-pitch predict "Norway" "England"
 Norway 35%  |  empate 20%  |  England 45%
 Vencedor: England (1-2) · confiança 57%
 
@@ -63,8 +66,9 @@ Surto de virose no elenco inglês (Rice, Guehi em dúvida) [fonte: metro.co.uk].
 ```bash
 uv sync                              # instala (Python 3.12)
 cp .env.example .env                 # configure 1 provider de LLM (p/ o agente)
-uv run pytest                        # 73 testes, ~96% de cobertura
+uv run pytest                        # 98 testes, ~94% de cobertura
 uv run deep-pitch baseline "Argentina" "Switzerland"   # não precisa de LLM
+uv run deep-pitch backtest                             # calibração honesta (sem LLM)
 uv run deep-pitch predict  "Argentina" "Switzerland"   # agente completo
 uv run deep-pitch serve                                # API em :8000
 ```
@@ -77,7 +81,7 @@ Groq, OpenRouter e NVIDIA têm free tier (ver `.env.example`).
 ```bash
 curl -X POST localhost:8000/predict \
   -H 'content-type: application/json' \
-  -d '{"home":"Norway","away":"England","neutral":true,"context":"semifinal"}'
+  -d '{"home":"Norway","away":"England","neutral":true}'
 ```
 
 ### Ver o agente pensar (LangGraph Studio)
@@ -89,7 +93,8 @@ uv run langgraph dev
 Abre o **LangGraph Studio** no browser: o grafo do agente, rodável dali, com o
 passo a passo — planejamento → delegação a `scout`/`historian` → cada tool
 (`baseline_prediction`, `web_search`, `live_feed`, `reconcile`) → `Prediction`.
-Com `LANGSMITH_API_KEY` setada, cada run também vira um trace no LangSmith.
+Com `LANGSMITH_API_KEY` setada, cada run também vira um trace no LangSmith. O
+**demo ao vivo** mostra esses mesmos passos em tempo real (stream) na própria tela.
 
 ## Arquitetura
 
@@ -107,11 +112,29 @@ api/       FastAPI · cli.py — CLI Typer
 
 Núcleo transport-agnostic: **CLI, API e `langgraph dev` consomem o mesmo `service`.**
 
+Deploy (HF Space grátis, Render, Fly, VPS + domínio): ver [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Model-agnostic
 
 Escolha por `.env` (`MODEL_PROVIDER`): `anthropic` (melhor tool-calling) · `google`
 · `groq` · `openrouter` · `nvidia` · **`free`** (cadeia de fallback entre os grátis —
 sobrevive a rate limit). Modelo diferente por papel (main forte, subagents baratos).
+
+## Calibração (backtest honesto, sem leakage)
+
+O baseline estatístico foi validado nos jogos da Copa 2026 já decididos, com o
+modelo ajustado **só com jogos anteriores** ao torneio (sem leakage):
+
+```console
+$ deep-pitch backtest
+Jogos avaliados: 98  |  acertos de vencedor: 66 (67%)
+RPS médio: 0.149  (menor = melhor; ~0.25 = chute uniforme)
+Treinado em 7772 jogos desde 2018 (só pré-Copa).
+```
+
+67% de acerto de vencedor e RPS 0.149 (vs ~0.25 do chute uniforme). O número mede
+o **prior estatístico** (não o agente híbrido) e cobre todos os jogos da Copa —
+fase de grupos + mata-mata, não só knockouts.
 
 ## Desenvolvido com eval
 
@@ -127,15 +150,6 @@ coberto por unit test.
 - [martj42/international_results](https://github.com/martj42/international_results) — resultados de seleções desde 1872 (CC0), inclui a Copa 2026
 - [penaltyblog](https://github.com/martineastwood/penaltyblog) — Dixon-Coles / Poisson / Elo (MIT)
 - [football-data.org](https://www.football-data.org/) — feed ao vivo (free tier cobre a Copa)
-
-## Roadmap
-
-- [x] Config model-agnostic (5 providers + `free`)
-- [x] Baseline Dixon-Coles + tools ao vivo
-- [x] Deep Agent (scout + historian + reconcile) + eval comportamental
-- [x] API FastAPI + CLI + LangGraph Studio
-- [ ] Backtest vs Opta Supercomputer / benchmarks
-- [ ] Elo como segundo prior
 
 ## Licença
 

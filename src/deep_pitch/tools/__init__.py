@@ -1,8 +1,5 @@
-"""Tools do agente.
-
-Por ora o baseline estatístico; nas próximas etapas entram busca web e feed
-ao vivo (football-data.org).
-"""
+"""Tools do agente: baseline Dixon-Coles + head_to_head (histórico), web_search
+(notícia/forma), live_feed (football-data.org) e reconcile (determinístico)."""
 
 from .baseline import BaselineResult, baseline_prediction, head_to_head, predict_match
 from .feed import live_feed

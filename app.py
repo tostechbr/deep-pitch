@@ -43,10 +43,14 @@ def _byok_settings(provider: str, api_key: str, model: str = ""):
 
 
 def _predict(home, away, neutral, context, provider, model, api_key, langsmith_key):
+    # generator: 1º yield = loading (feedback imediato), último = resultado
     if not (home and away):
-        return "⚠️ Informe os dois times (nomes em inglês)."
+        yield "⚠️ Informe os dois times (nomes em inglês)."
+        return
     if not api_key:
-        return "⚠️ Cole sua API key do provider escolhido (BYOK)."
+        yield "⚠️ Cole sua API key do provider escolhido (BYOK)."
+        return
+    yield "⏳ **Analisando…** consultando baseline estatístico, dados ao vivo e notícias (~1-2 min)."
     try:
         tracer = build_tracer(langsmith_key)  # trace no LangSmith do usuário, se der a key
         p = run_prediction(
@@ -55,12 +59,13 @@ def _predict(home, away, neutral, context, provider, model, api_key, langsmith_k
             callbacks=[tracer] if tracer else None,
         )
     except Exception as exc:  # provider/key inválido, rede, etc.
-        return f"❌ Erro: {exc}"
+        yield f"❌ Erro: {exc}"
+        return
 
     pr = p.probabilities
     fatores = "\n".join(f"- {f}" for f in p.key_factors)
     fontes = ", ".join(p.sources[:8])
-    return (
+    yield (
         f"## {p.winner} — {p.scoreline}\n"
         f"**Confiança:** {p.confidence:.0%}\n\n"
         f"| {p.home} | Empate | {p.away} |\n|:--:|:--:|:--:|\n"

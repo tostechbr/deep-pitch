@@ -68,6 +68,18 @@ def predict(
 
 
 @app.command()
+def backtest() -> None:
+    """Calibração: acerto do baseline nos jogos decididos da Copa 2026 (sem leakage)."""
+    from .backtest import run_backtest
+
+    typer.secho("Ajustando em pré-Copa e avaliando os jogos do torneio…", fg=typer.colors.CYAN, err=True)
+    r = run_backtest()
+    typer.echo(f"Jogos avaliados: {r.n}  |  acertos de vencedor: {r.hits} ({r.hit_rate:.0%})")
+    typer.echo(f"RPS médio: {r.mean_rps:.3f}  (menor = melhor; ~0.25 = chute uniforme)")
+    typer.secho(f"Treinado em {r.trained_on} jogos desde {r.since_year} (só pré-Copa).", fg=typer.colors.BRIGHT_BLACK)
+
+
+@app.command()
 def serve(
     host: str = typer.Option("127.0.0.1", help="Host."),
     port: int = typer.Option(8000, help="Porta."),

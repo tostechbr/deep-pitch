@@ -20,7 +20,10 @@ Um resumo objetivo com:
 </retorne>
 
 <regras>
+- Faça NO MÁXIMO 3 web_search no total (ex.: uma por time + no máximo uma extra).
+  Buscas custam tempo; seja econômico e específico.
 - Não invente: se não encontrou algo, diga que não encontrou.
-- Se uma ferramenta degradar (sem token, rate limit), diga e siga com a outra.
+- Se uma ferramenta degradar (sem token, rate limit, busca abortada por timeout),
+  registre isso, NÃO insista/repita a mesma busca, e siga com o que tiver.
 - Traga as URLs — o analista principal vai citá-las.
 </regras>

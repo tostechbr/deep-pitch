@@ -8,11 +8,16 @@ cai pro DDG. Erros de busca degradam para mensagem, não derrubam o agente.
 
 from __future__ import annotations
 
+import concurrent.futures
+
 from langchain.tools import tool
 
 from ..config.settings import Settings, get_settings
 
 _MAX_SNIPPET = 240
+# Parede dura: uma busca NUNCA segura o agente. Do IP de datacenter (ex.: HF Space)
+# o DDG costuma pendurar/tentar vários backends; sem isto o run trava no scout.
+_SEARCH_WALL_SECONDS = 10.0
 
 
 def _ddg_search(query: str, max_results: int) -> list[dict[str, str]]:
@@ -56,7 +61,14 @@ def web_search(query: str, max_results: int = 5) -> str:
     específicas (ex.: 'England injuries squad news July 2026').
     """
     try:
-        results = _search(query, max_results, get_settings())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(_search, query, max_results, get_settings())
+            results = future.result(timeout=_SEARCH_WALL_SECONDS)
+    except concurrent.futures.TimeoutError:
+        return (
+            f"Busca demorou demais (>{_SEARCH_WALL_SECONDS:.0f}s) e foi abortada — provável "
+            "bloqueio do provedor de busca a partir deste servidor. Prossiga sem ela."
+        )
     except Exception as exc:  # rate limit, rede, etc.
         return f"Busca indisponível no momento ({type(exc).__name__}). Tente reformular ou prossiga sem ela."
 

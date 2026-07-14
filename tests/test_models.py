@@ -53,6 +53,13 @@ def test_describe_model(make_settings):
     assert describe_model("main", s).startswith("groq:")
 
 
+def test_anthropic_disables_extended_thinking(make_settings):
+    # extended thinking do Claude 5 corrompe no replay do loop de tool dos subagents
+    # (Anthropic 400 'thinking.thinking: Field required'); o build tem que desligar.
+    s = make_settings(model_provider="anthropic", anthropic_api_key="dummy-key")
+    assert get_model("subagent", s).thinking == {"type": "disabled"}
+
+
 def test_get_model_does_not_leak_key_to_env(make_settings, monkeypatch):
     # segurança BYOK: a key vai por kwarg no construtor, NUNCA pro os.environ
     monkeypatch.delenv("GROQ_API_KEY", raising=False)

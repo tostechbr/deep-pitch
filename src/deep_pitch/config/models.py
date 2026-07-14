@@ -119,7 +119,17 @@ def _build(provider: Provider, name: str, settings: Settings) -> BaseChatModel:
 
         return ChatOpenAI(model=name, api_key=key, base_url=_OPENAI_COMPAT_BASE[provider])
 
-    return init_chat_model(f"{_INIT_CHAT_PROVIDER[provider]}:{name}", api_key=key)
+    extra: dict = {}
+    if provider == "anthropic":
+        # Desliga o extended thinking. Claude 5 emite blocos de `thinking`; no
+        # loop de tool dos subagents o middleware de summarization remonta as
+        # mensagens e corrompe esse bloco (manda sem o texto) → Anthropic 400
+        # "messages.N.content.0.thinking.thinking: Field required". Não usamos
+        # thinking (o raciocínio numérico vive no reconcile), então desligar é
+        # o fix mais direto e ainda deixa mais rápido/barato.
+        extra["thinking"] = {"type": "disabled"}
+
+    return init_chat_model(f"{_INIT_CHAT_PROVIDER[provider]}:{name}", api_key=key, **extra)
 
 
 def get_model(role: Role = "main", settings: Settings | None = None) -> BaseChatModel:

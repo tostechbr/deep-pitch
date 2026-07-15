@@ -112,7 +112,7 @@ api/       FastAPI · cli.py — CLI Typer
 
 Núcleo transport-agnostic: **CLI, API e `langgraph dev` consomem o mesmo `service`.**
 
-Deploy (HF Space grátis, Render, Fly, VPS + domínio): ver [docs/DEPLOY.md](docs/DEPLOY.md).
+Deploy: roda em HF Space (grátis), Render, Fly ou VPS + domínio.
 
 ## Model-agnostic
 
